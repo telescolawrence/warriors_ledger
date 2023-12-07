@@ -1,0 +1,30 @@
+{
+  "canisters": {
+    "warriors_ledger_backend": {
+      "candid": "src/warriors_ledger_backend/warriors_ledger_backend.did",
+      "package": "warriors_ledger_backend",
+      "type": "rust"
+    },
+    "warriors_ledger_frontend": {
+      "dependencies": [
+        "warriors_ledger_backend"
+      ],
+      "frontend": {
+        "entrypoint": "src/warriors_ledger_frontend/src/index.html"
+      },
+      "source": [
+        "src/warriors_ledger_frontend/assets",
+        "dist/warriors_ledger_frontend/"
+      ],
+      "type": "assets"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}

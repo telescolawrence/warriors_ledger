@@ -1,0 +1,114 @@
+type Error = variant { NotFound : record { msg : text } };
+type Leaderboard = record {
+  id : nat64;
+  player_id : nat64;
+  rank : nat64;
+  level : nat64;
+  score : nat64;
+};
+type LeaderboardPayload = record {
+  player_id : nat64;
+  rank : nat64;
+  level : nat64;
+  score : nat64;
+};
+type Match = record {
+  id : nat64;
+  player_id : nat64;
+  result : bool;
+  rank : nat64;
+  time : nat64;
+  weapon_id : nat64;
+  level : nat64;
+  score : nat64;
+};
+type MatchProfilePayload = record {
+  player_id : nat64;
+  result : bool;
+  rank : nat64;
+  time : nat64;
+  weapon_id : nat64;
+  level : nat64;
+  score : nat64;
+};
+type PlayerProfile = record {
+  id : nat64;
+  name : text;
+  rank : nat64;
+  level : nat64;
+  score : nat64;
+  match_history : vec Match;
+  weapons : vec Weapon;
+};
+type PlayerProfilePayload = record {
+  name : text;
+  rank : nat64;
+  level : nat64;
+  score : nat64;
+};
+type Result = variant { Ok; Err : Error };
+type Result_1 = variant { Ok : Leaderboard; Err : text };
+type Result_10 = variant { Ok : Leaderboard; Err : Error };
+type Result_11 = variant { Ok : Match; Err : Error };
+type Result_12 = variant { Ok : PlayerProfile; Err : Error };
+type Result_13 = variant { Ok : Weapon; Err : Error };
+type Result_2 = variant { Ok : Match; Err : text };
+type Result_3 = variant { Ok : PlayerProfile; Err : text };
+type Result_4 = variant { Ok : Weapon; Err : text };
+type Result_5 = variant { Ok : vec Leaderboard; Err : Error };
+type Result_6 = variant { Ok : vec Match; Err : Error };
+type Result_7 = variant { Ok : vec PlayerProfile; Err : Error };
+type Result_8 = variant { Ok : vec Weapon; Err : Error };
+type Result_9 = variant { Ok : nat64; Err : Error };
+type Weapon = record {
+  id : nat64;
+  damage : nat64;
+  ammo : nat64;
+  name : text;
+  rank : nat64;
+  fire_rate : nat64;
+  level : nat64;
+  reload_time : nat64;
+  price : nat64;
+  range : nat64;
+  accuracy : nat64;
+};
+type WeaponProfilePayload = record {
+  damage : nat64;
+  ammo : nat64;
+  name : text;
+  rank : nat64;
+  fire_rate : nat64;
+  level : nat64;
+  reload_time : nat64;
+  price : nat64;
+  range : nat64;
+  accuracy : nat64;
+};
+service : {
+  add_match_to_player_profile : (nat64, nat64) -> (Result);
+  add_weapon_to_player_profile : (nat64, nat64) -> (Result);
+  create_leaderboard : (LeaderboardPayload) -> (Result_1);
+  create_match : (MatchProfilePayload) -> (Result_2);
+  create_player_profile : (PlayerProfilePayload) -> (Result_3);
+  create_weapon : (WeaponProfilePayload) -> (Result_4);
+  delete_leaderboard : (nat64) -> (Result);
+  delete_match : (nat64) -> (Result);
+  delete_player_profile : (nat64) -> (Result);
+  delete_weapon : (nat64) -> (Result);
+  get_all_leaderboards : () -> (Result_5) query;
+  get_all_matches : () -> (Result_6) query;
+  get_all_players_profile : () -> (Result_7) query;
+  get_all_weapons : () -> (Result_8) query;
+  get_average_match_score : () -> (Result_9) query;
+  get_leaderboard : (nat64) -> (Result_10) query;
+  get_match : (nat64) -> (Result_11) query;
+  get_player_profile : (nat64) -> (Result_12) query;
+  get_weapon : (nat64) -> (Result_13) query;
+  rank_weapons_by_damage : () -> (Result_8) query;
+  sort_leaderboard_by_score : () -> (Result_5) query;
+  update_leaderboard : (nat64, LeaderboardPayload) -> (Result_10);
+  update_match : (nat64, MatchProfilePayload) -> (Result_11);
+  update_player_profile : (nat64, PlayerProfilePayload) -> (Result_12);
+  update_weapon_profile : (nat64, WeaponProfilePayload) -> (Result_13);
+}
