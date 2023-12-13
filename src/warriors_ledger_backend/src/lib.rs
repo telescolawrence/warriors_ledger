@@ -211,21 +211,24 @@ struct LeaderboardPayload {
 fn create_player_profile(
     player_profile_payload: PlayerProfilePayload,
 ) -> Result<PlayerProfile, String> {
+    // Validation for payload
     if player_profile_payload.name.trim().is_empty()
         || player_profile_payload.score == 0
         || player_profile_payload.level == 0
         || player_profile_payload.rank == 0
     {
-        return Err("Invalid player profile Payload Fill in the Spaces".to_string());
+        return Err("Invalid player profile payload. Please fill in all fields.".to_string());
     }
 
+    // Increment player ID counter
     let id = PLAYER_ID_COUNTER
         .with(|counter| {
             let current_value = *counter.borrow().get();
             counter.borrow_mut().set(current_value + 1)
         })
-        .expect("cannot increment id counter");
+        .expect("Cannot increment ID counter");
 
+    // Create player profile
     let player_profile = PlayerProfile {
         name: player_profile_payload.name,
         id,
@@ -235,13 +238,12 @@ fn create_player_profile(
         weapons: Vec::new(),
         match_history: Vec::new(),
     };
+    // Insert player profile
     do_insert_player(&player_profile);
     Ok(player_profile)
-
 }
 
-
-// helper function to get player profile
+// Helper function to get player profile
 fn do_insert_player(player: &PlayerProfile) {
     PLAYER_PROFILE_STORAGE.with(|service| {
         service
@@ -250,18 +252,20 @@ fn do_insert_player(player: &PlayerProfile) {
     });
 }
 
-//function to update player profile
+// Function to update player profile
 #[ic_cdk::update]
-fn update_player_profile(id:u64,player_profile_payload: PlayerProfilePayload)-> Result<PlayerProfile, Error>{
+fn update_player_profile(id: u64, player_profile_payload: PlayerProfilePayload) -> Result<PlayerProfile, Error> {
+    // Validation for payload
     if player_profile_payload.name.trim().is_empty()
         || player_profile_payload.score == 0
         || player_profile_payload.level == 0
         || player_profile_payload.rank == 0
     {
         return Err(Error::NotFound {
-            msg: "Invalid player profile".to_string(),
+            msg: "Invalid player profile payload. Please fill in all fields.".to_string(),
         });
     }
+    // Retrieve existing player profile
     let player_profile = PLAYER_PROFILE_STORAGE.with(|service| {
         service
             .borrow_mut()
@@ -271,6 +275,7 @@ fn update_player_profile(id:u64,player_profile_payload: PlayerProfilePayload)-> 
             })
     })?;
 
+    // Create updated player profile
     let updated_player_profile = PlayerProfile {
         name: player_profile_payload.name,
         id,
@@ -281,11 +286,10 @@ fn update_player_profile(id:u64,player_profile_payload: PlayerProfilePayload)-> 
         match_history: player_profile.match_history,
     };
 
+    // Insert updated player profile
     do_insert_player(&updated_player_profile);
     Ok(updated_player_profile)
-
 }
-
 
 // get player profile by id
 #[ic_cdk::query]
@@ -889,5 +893,5 @@ enum  Error {
     NotFound { msg: String },
 }
 
-// Export the candid interface
+// Export the Candid interface
 ic_cdk::export_candid!();
