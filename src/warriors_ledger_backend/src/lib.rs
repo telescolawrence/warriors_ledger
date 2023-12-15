@@ -1,128 +1,11 @@
 #[macro_use]
 extern crate serde;
-use candid::{Decode, Encode};
-use ic_stable_structures::memory_manager::{MemoryId, MemoryManager, VirtualMemory};
-use ic_stable_structures::{BoundedStorable, Cell, DefaultMemoryImpl, StableBTreeMap, Storable};
-use std::{borrow::Cow, cell::RefCell};
+use ic_stable_structures::memory_manager::{MemoryId, MemoryManager};
+use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap};
+use std::cell::RefCell;
 
-type Memory = VirtualMemory<DefaultMemoryImpl>;
-type IdCell = Cell<u64, Memory>;
-
-//struct to  store player profile
-#[derive(candid::CandidType, Clone, Serialize, Deserialize)]
-struct PlayerProfile {
-    name: String,
-    id: u64,
-    score: u64,
-    level: u64,
-    rank: u64,
-    weapons: Vec<Weapon>,      //List of all weapons owned by player
-    match_history: Vec<Match>, //List of all matches played by player
-}
-
-//struct to store weapon profile
-#[derive(candid::CandidType, Clone, Serialize, Deserialize)]
-struct Weapon {
-    name: String,
-    id: u64,
-    damage: u64,
-    ammo: u64,
-    range: u64,       //range of weapon in meters
-    fire_rate: u64,   //number of bullets fired per second
-    reload_time: u64, //time taken to reload in seconds
-    accuracy: u64,    //accuracy of weapon in percentage
-    price: u64,
-    level: u64,
-    rank: u64,
-}
-
-//struct to store match profile
-#[derive(candid::CandidType, Clone, Serialize, Deserialize)]
-struct Match {
-    id: u64,
-    player_id: u64,
-    weapon_id: u64,
-    score: u64,
-    level: u64,
-    rank: u64,
-    time: u64, //time taken to complete match in minutes
-    result: bool,
-}
-
-//struct to store leaderboard
-#[derive(candid::CandidType, Clone, Serialize, Deserialize)]
-struct Leaderboard {
-    id: u64,
-    player_id: u64,
-    score: u64,
-    level: u64,
-    rank: u64,
-}
-
-//Implement Storable and BoundedStorable for PlayerProfile
-impl Storable for PlayerProfile {
-    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
-        Cow::Owned(Encode!(self).unwrap())
-    }
-
-    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
-        Decode!(bytes.as_ref(), Self).unwrap()
-    }
-}
-
-impl BoundedStorable for PlayerProfile {
-    const MAX_SIZE: u32 = 1024;
-    const IS_FIXED_SIZE: bool = false;
-}
-
-//Implement Storable and BoundedStorable for Weapon
-impl Storable for Weapon {
-    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
-        Cow::Owned(Encode!(self).unwrap())
-    }
-
-    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
-        Decode!(bytes.as_ref(), Self).unwrap()
-    }
-}
-
-impl BoundedStorable for Weapon {
-    const MAX_SIZE: u32 = 1024;
-    const IS_FIXED_SIZE: bool = false;
-}
-
-//Implement Storable and BoundedStorable for Match
-
-impl Storable for Match {
-    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
-        Cow::Owned(Encode!(self).unwrap())
-    }
-
-    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
-        Decode!(bytes.as_ref(), Self).unwrap()
-    }
-}
-
-impl BoundedStorable for Match {
-    const MAX_SIZE: u32 = 1024;
-    const IS_FIXED_SIZE: bool = false;
-}
-
-//Implement Storable and BoundedStorable for Leaderboard
-impl Storable for Leaderboard {
-    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
-        Cow::Owned(Encode!(self).unwrap())
-    }
-
-    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
-        Decode!(bytes.as_ref(), Self).unwrap()
-    }
-}
-
-impl BoundedStorable for Leaderboard {
-    const MAX_SIZE: u32 = 1024;
-    const IS_FIXED_SIZE: bool = false;
-}
+mod types;
+use types::*;
 
 //Declare thread local variables
 thread_local! {
@@ -161,64 +44,13 @@ thread_local! {
 
 }
 
-//player profile payload
-#[derive(candid::CandidType, Clone, Serialize, Deserialize)]
-struct PlayerProfilePayload {
-    name: String,
-    score: u64,
-    level: u64,
-    rank: u64,
-}
-
-//weapon profile payload
-#[derive(candid::CandidType, Clone, Serialize, Deserialize)]
-struct WeaponProfilePayload {
-    name: String,
-    damage: u64,
-    ammo: u64,
-    range: u64,       //range of weapon in meters
-    fire_rate: u64,   //number of bullets fired per second
-    reload_time: u64, //time taken to reload in seconds
-    accuracy: u64,    //accuracy of weapon in percentage
-    price: u64,
-    level: u64,
-    rank: u64,
-}
-
-//match profile payload
-#[derive(candid::CandidType, Clone, Serialize, Deserialize)]
-struct MatchProfilePayload {
-    player_id: u64,
-    weapon_id: u64,
-    score: u64,
-    level: u64,
-    rank: u64,
-    time: u64, //time taken to complete match in minutes
-    result: bool, // 
-}
-
-//leaderboard payload
-#[derive(candid::CandidType, Clone, Serialize, Deserialize)]
-struct LeaderboardPayload {
-    player_id: u64,
-    score: u64,
-    level: u64,
-    rank: u64,
-}
-
 //function to create player profile
 #[ic_cdk::update]
 fn create_player_profile(
     player_profile_payload: PlayerProfilePayload,
-) -> Result<PlayerProfile, String> {
-    if player_profile_payload.name.trim().is_empty()
-        || player_profile_payload.score == 0
-        || player_profile_payload.level == 0
-        || player_profile_payload.rank == 0
-    {
-        return Err("Invalid player profile Payload Fill in the Spaces".to_string());
-    }
+) -> Result<PlayerProfile, Error> {
 
+    is_valid_player_payload(&player_profile_payload)?;
     let id = PLAYER_ID_COUNTER
         .with(|counter| {
             let current_value = *counter.borrow().get();
@@ -253,15 +85,7 @@ fn do_insert_player(player: &PlayerProfile) {
 //function to update player profile
 #[ic_cdk::update]
 fn update_player_profile(id:u64,player_profile_payload: PlayerProfilePayload)-> Result<PlayerProfile, Error>{
-    if player_profile_payload.name.trim().is_empty()
-        || player_profile_payload.score == 0
-        || player_profile_payload.level == 0
-        || player_profile_payload.rank == 0
-    {
-        return Err(Error::NotFound {
-            msg: "Invalid player profile".to_string(),
-        });
-    }
+    is_valid_player_payload(&player_profile_payload)?;
     let player_profile = PLAYER_PROFILE_STORAGE.with(|service| {
         service
             .borrow_mut()
@@ -337,20 +161,8 @@ fn delete_player_profile(id: u64) -> Result<(), Error> {
 #[ic_cdk::update]
 fn create_weapon(
     weapon_payload: WeaponProfilePayload,
-) -> Result<Weapon, String> {
-    if weapon_payload.name.trim().is_empty()
-        || weapon_payload.damage == 0
-        || weapon_payload.ammo == 0
-        || weapon_payload.range == 0
-        || weapon_payload.fire_rate == 0
-        || weapon_payload.reload_time == 0
-        || weapon_payload.accuracy == 0
-        || weapon_payload.price == 0
-        || weapon_payload.level == 0
-        || weapon_payload.rank == 0
-    {
-        return Err("Invalid weapon profile Payload Fill in the Spaces".to_string());
-    }
+) -> Result<Weapon, Error> {
+    is_valid_weapon_payload(&weapon_payload)?;
 
     let id = WEAPON_ID_COUNTER
         .with(|counter| {
@@ -388,21 +200,8 @@ fn do_insert_weapon(weapon: &Weapon) {
 //function to update weapon profile
 #[ic_cdk::update]
 fn update_weapon_profile(id:u64,weapon_payload: WeaponProfilePayload)-> Result<Weapon, Error>{
-    if weapon_payload.name.trim().is_empty()
-        || weapon_payload.damage == 0
-        || weapon_payload.ammo == 0
-        || weapon_payload.range == 0
-        || weapon_payload.fire_rate == 0
-        || weapon_payload.reload_time == 0
-        || weapon_payload.accuracy == 0
-        || weapon_payload.price == 0
-        || weapon_payload.level == 0
-        || weapon_payload.rank == 0
-    {
-        return Err(Error::NotFound {
-            msg: "Invalid weapon profile".to_string(),
-        });
-    }
+    is_valid_weapon_payload(&weapon_payload)?;
+
     WEAPON_PROFILE_STORAGE.with(|service| {
         service
             .borrow_mut()
@@ -548,14 +347,8 @@ fn add_weapon_to_player_profile(player_id: u64, weapon_id: u64) -> Result<(), Er
 #[ic_cdk::update]
 fn create_match(
     match_payload: MatchProfilePayload,
-) -> Result<Match, String> {
-    if match_payload.score == 0
-        || match_payload.level == 0
-        || match_payload.rank == 0
-        || match_payload.time == 0
-    {
-        return Err("Invalid match profile Payload Fill in the Spaces".to_string());
-    }
+) -> Result<Match, Error> {
+    is_valid_match_payload(&match_payload)?;
 
     let id = MATCH_ID_COUNTER
         .with(|counter| {
@@ -590,17 +383,7 @@ fn do_insert_match(match_profile: &Match) {
 //function to update match
 #[ic_cdk::update]
 fn update_match(id:u64,match_payload: MatchProfilePayload)-> Result<Match, Error>{
-    if match_payload.player_id == 0
-        || match_payload.weapon_id == 0
-        || match_payload.score == 0
-        || match_payload.level == 0
-        || match_payload.rank == 0
-        || match_payload.time == 0
-    {
-        return Err(Error::NotFound {
-            msg: "Invalid match profile".to_string(),
-        });
-    }
+    is_valid_match_payload(&match_payload)?;
     MATCH_PROFILE_STORAGE.with(|service| {
         service
             .borrow_mut()
@@ -747,13 +530,8 @@ fn get_average_match_score() -> Result<u64, Error> {
 #[ic_cdk::update]
 fn create_leaderboard(
     leaderboard_payload: LeaderboardPayload,
-) -> Result<Leaderboard, String> {
-    if  leaderboard_payload.score == 0
-        || leaderboard_payload.level == 0
-        || leaderboard_payload.rank == 0
-    {
-        return Err("Invalid leaderboard Payload Fill in the Spaces".to_string());
-    }
+) -> Result<Leaderboard, Error> {
+    is_valid_leaderboard_payload(&leaderboard_payload)?;
 
     let id = LEADERBOARD_ID_COUNTER
         .with(|counter| {
@@ -786,15 +564,7 @@ fn do_insert_leaderboard(leaderboard: &Leaderboard) {
 //function to update leaderboard
 #[ic_cdk::update]
 fn update_leaderboard(id:u64,leaderboard_payload: LeaderboardPayload)-> Result<Leaderboard, Error>{
-    if leaderboard_payload.player_id == 0
-        || leaderboard_payload.score == 0
-        || leaderboard_payload.level == 0
-        || leaderboard_payload.rank == 0
-    {
-        return Err(Error::NotFound {
-            msg: "Invalid leaderboard".to_string(),
-        });
-    }
+    is_valid_leaderboard_payload(&leaderboard_payload)?;
     LEADERBOARD_STORAGE.with(|service| {
         service
             .borrow_mut()
@@ -882,12 +652,92 @@ fn sort_leaderboard_by_score() -> Result<Vec<Leaderboard>, Error> {
     }
 }
 
-
-// Error type for the service
-#[derive(candid::CandidType, Deserialize, Serialize)]
-enum  Error {
-    NotFound { msg: String },
+// Helper function to ensure the input payload does not contain default values
+fn is_valid_player_payload(player_profile_payload: &PlayerProfilePayload) -> Result<(), Error>{
+    if player_profile_payload.name.trim().is_empty()
+    || player_profile_payload.score == 0
+    || player_profile_payload.level == 0
+    || player_profile_payload.rank == 0
+{
+    return Err(Error::InvalidPlayerPayload {
+         msg: format!("Player profile cannot be initialized with default values"),
+         payload: player_profile_payload.clone() 
+        });
 }
+else{
+    Ok(())
+}
+}
+// Helper function to ensure the input payload does not contain default values
+fn is_valid_weapon_payload(weapon_payload: &WeaponProfilePayload) -> Result<(), Error>{
+        if weapon_payload.name.trim().is_empty()
+        || weapon_payload.damage == 0
+        || weapon_payload.ammo == 0
+        || weapon_payload.range == 0
+        || weapon_payload.fire_rate == 0
+        || weapon_payload.reload_time == 0
+        || weapon_payload.accuracy == 0
+        || weapon_payload.price == 0
+        || weapon_payload.level == 0
+        || weapon_payload.rank == 0
+    {
+        return Err(Error::InvalidWeaponPayload {
+            msg: format!("Weapon profile cannot be initialized with default values"),
+            payload: weapon_payload.clone() 
+        });
+    }
+else{
+    Ok(())
+}
+}
+// Helper function to ensure the input payload does not contain default values
+fn is_valid_match_payload(match_payload: &MatchProfilePayload) -> Result<(), Error>{
+    if match_payload.score == 0
+    || match_payload.level == 0
+    || match_payload.rank == 0
+    || match_payload.time == 0
+{
+    return Err(Error::InvalidMatchPayload {
+        msg: format!("Match cannot be initialized with default values"),
+        payload: match_payload.clone() 
+    });
+}
+let is_valid_player_id = PLAYER_PROFILE_STORAGE.with(|service| {
+    service
+        .borrow()
+        .contains_key(&match_payload.player_id)
+});
+if !is_valid_player_id {
+    return Err(Error::NotFound { msg: format!("Player with id={} does not exist.", match_payload.player_id) })
+}
+else{
+Ok(())
+}
+}
+// Helper function to ensure the input payload does not contain default values
+fn is_valid_leaderboard_payload(leaderboard_payload: &LeaderboardPayload) -> Result<(), Error>{
+    if  leaderboard_payload.score == 0
+    || leaderboard_payload.level == 0
+    || leaderboard_payload.rank == 0
+{
+    return Err(Error::InvalidLeaderboardPayload {
+        msg: format!("Leaderboard cannot be initialized with default values"),
+        payload: leaderboard_payload.clone() 
+    });
+}
+let is_valid_player_id = PLAYER_PROFILE_STORAGE.with(|service| {
+    service
+        .borrow()
+        .contains_key(&leaderboard_payload.player_id)
+});
+if !is_valid_player_id {
+    return Err(Error::NotFound { msg: format!("Player with id={} does not exist.", leaderboard_payload.player_id) })
+}
+else{
+Ok(())
+}
+}
+
 
 // Export the candid interface
 ic_cdk::export_candid!();
